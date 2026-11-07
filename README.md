@@ -1,4 +1,4 @@
-# 🎸 Empório da Música — AI Customer Support Agent
+# Empório da Música — AI Customer Support Agent
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Render-brightgreen?style=for-the-badge&logo=render)](https://artefact-rovw.onrender.com)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
@@ -8,7 +8,7 @@
 [![Google Gemini](https://img.shields.io/badge/LLM-Gemini_3.1_Flash_Lite-4285F4.svg)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> 🚀 **Live Interactive Demo:** [https://artefact-rovw.onrender.com](https://artefact-rovw.onrender.com)  
+ **Live Interactive Demo:** [https://artefact-rovw.onrender.com](https://artefact-rovw.onrender.com)  
 > *Evaluators can test the complete AI agent, catalog queries, and store policy RAG directly in the browser.*
 
 An intelligent, full-stack customer support agent prototype built for **Empório da Música**, a traditional musical instrument store based in Campo Grande, MS.
@@ -17,7 +17,7 @@ Designed for the **Artefact AI Engineer – Full-Stack para Aplicações com IA 
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 - [1. Executive Summary](#1-executive-summary)
 - [2. System Architecture](#2-system-architecture)
 - [3. Justification of Technical Decisions](#3-justification-of-technical-decisions)
