@@ -92,32 +92,26 @@ class EmporioAgent:
         self,
         chat: Any,
         message: str,
-        retries: int = 2,
+        retries: int = 3,
     ) -> Any:
-        """Execute chat turn with fallback to flash-lite and retry handling on rate-limit."""
+        """Execute chat turn with exponential backoff for 429 (quota) and 503 (high demand) transient errors."""
         for attempt in range(retries + 1):
             try:
                 return chat.send_message(message)
-            except ClientError as e:
+            except (ClientError, Exception) as e:
                 err_str = str(e)
-                if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
-                    logger.warning(f"Rate limit reached on attempt {attempt + 1}. Error: {e}")
-                    if attempt < retries:
-                        time.sleep(3 * (attempt + 1))
-                        continue
-                    else:
-                        # Fallback to lite model
-                        logger.info("Falling back to gemini-2.5-flash-lite...")
-                        fallback_chat = self.client.chats.create(
-                            model=self.fallback_model,
-                            config=types.GenerateContentConfig(
-                                system_instruction=EMPORIO_SYSTEM_PROMPT,
-                                tools=self.tools,
-                                temperature=0.3,
-                            ),
-                            history=chat.get_history()
-                        )
-                        return fallback_chat.send_message(message)
+                is_transient = (
+                    "RESOURCE_EXHAUSTED" in err_str or
+                    "429" in err_str or
+                    "503" in err_str or
+                    "UNAVAILABLE" in err_str or
+                    "high demand" in err_str
+                )
+                if is_transient and attempt < retries:
+                    backoff = 3 * (attempt + 1)
+                    logger.warning(f"Transient error on attempt {attempt + 1}: {err_str[:120]}... Backing off {backoff}s")
+                    time.sleep(backoff)
+                    continue
                 raise
 
     def chat(
