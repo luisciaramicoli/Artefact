@@ -14,9 +14,14 @@ import {
   Package,
   RotateCcw,
   Guitar,
-  Sparkles,
-  Search,
-  CheckCheck
+  Sliders,
+  Compass,
+  CheckCheck,
+  User,
+  Store,
+  ArrowRight,
+  ShieldCheck,
+  CircleDot
 } from 'lucide-react';
 
 const SUGGESTIONS = [
@@ -27,14 +32,14 @@ const SUGGESTIONS = [
     prompt: "Quais opções de violões vocês têm disponíveis custando até R$ 1.000?"
   },
   {
-    icon: Sparkles,
+    icon: Sliders,
     title: "Ficha do Takamine GD20",
     desc: "Preço, formas de pagamento e especificações",
     prompt: "Quanto custa o Takamine GD20 e quais as opções de parcelamento?"
   },
   {
     icon: Package,
-    title: "Acompanhar Meu Pedido",
+    title: "Acompanhar Pedido",
     desc: "Consulte o status e rastreamento da entrega",
     prompt: "Gostaria de saber o status e rastreamento do meu pedido número 1."
   },
@@ -46,12 +51,12 @@ const SUGGESTIONS = [
   },
   {
     icon: MapPin,
-    title: "Onde Fica a Loja?",
+    title: "Localização da Loja",
     desc: "Endereço em Campo Grande e horários de atendimento",
     prompt: "Qual o endereço da loja física e quais os horários de funcionamento?"
   },
   {
-    icon: Search,
+    icon: Compass,
     title: "Catálogo Completo",
     desc: "Conheça todas as categorias e instrumentos da loja",
     prompt: "Quais produtos e categorias de instrumentos vocês oferecem?"
@@ -182,13 +187,19 @@ export default function App() {
       const errorMsg = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: `Desculpe, tive uma instabilidade passageira na conexão. Poderia enviar sua pergunta novamente? Estou à disposição!`,
+        content: `Desculpe, tive uma instabilidade passageira na conexão. Poderia enviar sua pergunta novamente? Estou à disposição.`,
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMsg]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper to remove any residual emojis from text if present
+  const sanitizeText = (text) => {
+    if (!text) return "";
+    return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}]/gu, '');
   };
 
   return (
@@ -210,12 +221,12 @@ export default function App() {
         {/* Brand Header */}
         <div className="p-4 border-b border-stone-800 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-stone-950 shadow-md">
-              <Guitar className="w-6 h-6 stroke-[2.2]" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-stone-950 shadow-md">
+              <Guitar className="w-5 h-5 stroke-[2.2]" />
             </div>
             <div>
               <h1 className="font-bold text-base text-white tracking-tight leading-snug">Empório da Música</h1>
-              <p className="text-xs text-amber-400/90 font-medium">Sua música começa aqui</p>
+              <p className="text-xs text-amber-400 font-medium">Atendimento ao Cliente</p>
             </div>
           </div>
           <button
@@ -240,13 +251,13 @@ export default function App() {
         {/* Saved Conversations List */}
         <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
           <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
-            Conversas Anteriores
+            Histórico de Atendimento
           </p>
           {conversations.length === 0 ? (
             <div className="px-3 py-8 text-center text-xs text-stone-400 space-y-1">
               <MessageSquare className="w-6 h-6 mx-auto opacity-40 mb-2" />
-              <p>Nenhuma conversa salva ainda.</p>
-              <p className="text-[11px] text-stone-400">Inicie uma conversa ao lado!</p>
+              <p>Nenhuma conversa gravada.</p>
+              <p className="text-[11px] text-stone-500">Inicie uma nova mensagem ao lado.</p>
             </div>
           ) : (
             conversations.map((c) => {
@@ -263,7 +274,7 @@ export default function App() {
                 >
                   <div className="flex items-center space-x-2.5 truncate pr-2">
                     <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-amber-400' : 'text-stone-400'}`} />
-                    <span className="truncate">{c.title || "Atendimento"}</span>
+                    <span className="truncate">{sanitizeText(c.title) || "Atendimento"}</span>
                   </div>
                   <button
                     onClick={(e) => handleDeleteConversation(e, c.id)}
@@ -278,7 +289,7 @@ export default function App() {
           )}
         </div>
 
-        {/* Customer Information Footer */}
+        {/* Store Info Footer */}
         <div className="p-4 border-t border-stone-800 bg-stone-900/60 text-xs text-stone-300 space-y-2.5">
           <div className="flex items-start space-x-2">
             <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
@@ -286,7 +297,7 @@ export default function App() {
           </div>
           <div className="flex items-center space-x-2">
             <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span className="text-[11px]">Seg a Sex 09h–18h | Sáb 09h–13h</span>
+            <span className="text-[11px]">Seg a Sex: 09h às 18h | Sáb: 09h às 13h</span>
           </div>
           <div className="flex items-center space-x-2">
             <Phone className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -307,16 +318,16 @@ export default function App() {
               <Menu className="w-5 h-5" />
             </button>
             <div className="relative">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-stone-950 shadow">
-                <Guitar className="w-5 h-5 stroke-[2.2]" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-stone-950 shadow">
+                <Store className="w-5 h-5 stroke-[2.2]" />
               </div>
               <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-stone-900" />
             </div>
             <div>
               <h2 className="text-sm font-semibold text-white leading-tight">Empório da Música</h2>
-              <div className="flex items-center space-x-1.5 text-[11px] text-emerald-400">
+              <div className="flex items-center space-x-1.5 text-[11px] text-emerald-400 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Atendente Virtual • Online</span>
+                <span>Atendimento Especializado • Online</span>
               </div>
             </div>
           </div>
@@ -335,17 +346,17 @@ export default function App() {
         {/* Message Feed */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
           {messages.length === 0 ? (
-            /* Welcome State with Customer-Focused Prompts */
+            /* Welcome State with Clean Icon Cards */
             <div className="max-w-2xl mx-auto py-8 text-center space-y-6">
               <div className="inline-flex p-4 rounded-2xl bg-gradient-to-b from-stone-800 to-stone-900 border border-stone-800 text-amber-400 shadow-xl">
                 <Guitar className="w-10 h-10 stroke-[1.8]" />
               </div>
               <div className="space-y-2">
                 <h2 className="text-2xl font-bold text-white tracking-tight">
-                  Olá! Como posso ajudar você hoje? 🎸
+                  Como podemos ajudar você hoje?
                 </h2>
                 <p className="text-sm text-stone-300 max-w-lg mx-auto leading-relaxed">
-                  Bem-vindo à <strong>Empório da Música</strong>! Estou aqui para te ajudar a escolher o instrumento perfeito, consultar preços, tirar dúvidas sobre entregas ou acompanhar seus pedidos.
+                  Bem-vindo à <strong>Empório da Música</strong>. Estamos à disposição para consultar modelos, preços, disponibilidade de estoque, prazos de entrega ou apoiar com suas compras.
                 </p>
               </div>
 
@@ -357,15 +368,19 @@ export default function App() {
                     <button
                       key={idx}
                       onClick={() => handleSendMessage(item.prompt)}
-                      className="p-3.5 rounded-2xl bg-stone-900/90 hover:bg-stone-800/90 border border-stone-800 hover:border-amber-500/40 transition-all text-left group active:scale-[0.99] shadow-sm"
+                      className="p-3.5 rounded-2xl bg-stone-900/90 hover:bg-stone-800/90 border border-stone-800 hover:border-amber-500/40 transition-all text-left group active:scale-[0.99] shadow-sm flex items-start space-x-3"
                     >
-                      <div className="flex items-center space-x-2 text-amber-400 group-hover:text-amber-300 mb-1">
+                      <div className="p-2 rounded-xl bg-stone-800 text-amber-400 group-hover:bg-amber-600 group-hover:text-stone-950 transition-colors shrink-0">
                         <Icon className="w-4 h-4" />
-                        <span className="text-xs font-semibold">{item.title}</span>
                       </div>
-                      <p className="text-xs text-stone-300 group-hover:text-stone-200 leading-snug">
-                        {item.desc}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-semibold text-white group-hover:text-amber-300 block mb-0.5">
+                          {item.title}
+                        </span>
+                        <p className="text-xs text-stone-400 group-hover:text-stone-300 leading-snug truncate">
+                          {item.desc}
+                        </p>
+                      </div>
                     </button>
                   );
                 })}
@@ -376,21 +391,22 @@ export default function App() {
             <div className="max-w-3xl mx-auto space-y-5">
               {messages.map((m) => {
                 const isUser = m.role === 'user';
+                const cleanContent = sanitizeText(m.content);
 
                 return (
                   <div
                     key={m.id}
                     className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
                   >
-                    {/* Avatar */}
+                    {/* Avatar with Lucide Icon */}
                     <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs shadow-sm ${
                         isUser
-                          ? 'bg-amber-600 text-stone-950 shadow-md font-semibold'
+                          ? 'bg-amber-600 text-stone-950'
                           : 'bg-stone-800 border border-stone-700 text-amber-400'
                       }`}
                     >
-                      {isUser ? 'Você' : <Guitar className="w-4 h-4" />}
+                      {isUser ? <User className="w-4 h-4 stroke-[2.2]" /> : <Store className="w-4 h-4 stroke-[2]" />}
                     </div>
 
                     {/* Bubble Content */}
@@ -403,8 +419,17 @@ export default function App() {
                         }`}
                       >
                         <div className={`prose ${isUser ? 'text-stone-950 prose-invert-0' : 'prose-invert prose-stone'} max-w-none text-sm break-words`}>
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {m.content}
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              li: ({ node, children, ...props }) => (
+                                <li className="my-1.5 list-disc ml-4 leading-relaxed" {...props}>
+                                  {children}
+                                </li>
+                              )
+                            }}
+                          >
+                            {cleanContent}
                           </ReactMarkdown>
                         </div>
                       </div>
@@ -414,7 +439,7 @@ export default function App() {
                         <span>
                           {m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
-                        {isUser && <CheckCheck className="w-3 h-3 text-amber-400/80 inline" />}
+                        {isUser && <CheckCheck className="w-3.5 h-3.5 text-amber-400 inline" />}
                       </div>
                     </div>
                   </div>
@@ -425,7 +450,7 @@ export default function App() {
               {loading && (
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-xl bg-stone-800 border border-stone-700 flex items-center justify-center shrink-0 text-amber-400">
-                    <Guitar className="w-4 h-4 animate-pulse" />
+                    <Store className="w-4 h-4 animate-pulse" />
                   </div>
                   <div className="rounded-2xl rounded-tl-sm px-4 py-3 bg-stone-900 border border-stone-800 text-stone-300 flex items-center space-x-2 text-xs">
                     <div className="flex space-x-1 items-center py-0.5">
