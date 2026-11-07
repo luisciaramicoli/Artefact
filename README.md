@@ -100,11 +100,81 @@ flowchart TD
 | :--- | :--- | :--- |
 | **Main Language** | **Python 3.11+** | Mandatory test constraint. Python offers native support for the official Google GenAI SDK, Qdrant client, SQLAlchemy, and FastAPI. |
 | **Agent Architecture** | **Hybrid Tool Calling + Vector RAG** | **Pure RAG fails on math and inventory** (LLMs hallucinate stock counts and prices). **Pure SQL fails on natural language policies**. A hybrid architecture with Function Calling gives deterministic precision for data and semantic flexibility for policy text. |
+| **Catalog & Order Storage** | **Relational SQL (SQLite + SQLAlchemy)** | Exact relational filtering (`WHERE price <= 1000`), volatile stock inventory, ACID transactions, and deterministic financial math (5% PIX discount). |
+| **Policy Search** | **Vector RAG (Qdrant + Embeddings)** | Natural language retrieval across unstructured guidelines (`políticas_da_loja.pdf`), handling customer paraphrasing and intent variations. |
 | **LLM Provider** | **Google Gemini (`gemini-3.1-flash-lite`)** | Native multimodal and function-calling capabilities, extremely fast latency (< 1.5s), reliable reasoning, and high quota stability for customer support workloads. |
 | **Vector Store** | **Qdrant (`qdrant-client`)** | State-of-the-art vector engine. Runs in **zero-friction embedded mode** (`qdrant_storage/`) requiring no external Docker daemon to run locally, while remaining 100% compatible with remote Qdrant clusters. |
 | **Relational Database** | **SQLite + SQLAlchemy** | Serverless, zero-dependency persistence out-of-the-box for evaluators. Easily swapped for PostgreSQL by updating `DATABASE_URL`. |
-| **Frontend UI** | **React + Vite + Tailwind CSS** | Fulfills the "Full-Stack AI Engineer" profile. Provides a clean WhatsApp-inspired UI with instant prompt suggestions and collapsible badges displaying real-time tool execution traces. |
+| **Backend API** | **FastAPI + Uvicorn** | High concurrency ASGI runtime, automatic OpenAPI documentation, Pydantic type safety, and unified SPA static asset serving. |
+| **Frontend UI** | **React 19 + Vite + Tailwind CSS** | Fulfills the "Full-Stack AI Engineer" profile. Provides a clean WhatsApp-inspired UI with instant prompt suggestions, session persistence, and full mobile responsiveness. |
+| **Iconography** | **Lucide React (Vector SVG)** | Strict adherence to the professional musical aesthetic without amateur text emojis. |
 | **Interactive CLI** | **Python Rich Console** | Enables instant evaluator testing directly in the terminal without compiling the web frontend. |
+
+---
+
+### 3.1 Deep Dive: Why Relational SQL for Products & Orders (Instead of Vectorization)?
+
+A common anti-pattern in naive AI prototypes is embedding tabular catalog and transaction data directly into a vector database. In a production e-commerce setting like *Empório da Música*, using **Relational SQL via SQLAlchemy** was an intentional engineering choice for five concrete reasons:
+
+1. **Exact Numerical Inequalities & Range Filters (`WHERE price <= 1000`):**
+   - *The Problem with Vectors:* Vector search evaluates cosine similarity on text embeddings. It has no semantic understanding of numerical scalar boundaries. When a customer asks for *"violões até R$ 1.000"*, vector search frequently retrieves an R$ 1.299 instrument because its description ("violão de excelente custo-benefício para iniciantes") closely matches the query embedding.
+   - *The SQL Solution:* Parameterized SQL allows strict mathematical filtering: `Product.price <= max_price`. Only instruments strictly meeting the client's budget are returned.
+
+2. **Real-Time Inventory Volatility & Concurrency (`stock > 0`):**
+   - *The Problem with Vectors:* Stock levels are highly mutable and fluctuate with every purchase and cancellation. Updating document vectors in a vector database requires continuous re-indexing or complex payload filtering that degrades retrieval throughput.
+   - *The SQL Solution:* Relational databases provide ACID transaction guarantees. A query immediately reflects whether `stock_quantity > 0`, avoiding the critical error of selling an out-of-stock instrument (as demonstrated in Order #18).
+
+3. **Deterministic Financial Math (5% PIX Discount & Installments):**
+   - *The Problem with Vectors:* LLMs are notoriously prone to arithmetic hallucinations when performing percentage deductions or installment calculations.
+   - *The SQL Solution:* Authoritative base prices are retrieved from SQLite, and exact financial calculations are computed deterministically in Python (`price * 0.95` for PIX, `min(12, int(price // 100))` for installment rules with a minimum R$ 100 threshold). The LLM is provided with already calculated, mathematically guaranteed values.
+
+4. **Exact Entity & Primary Key Lookups (`WHERE order_id = 17`):**
+   - *The Problem with Vectors:* Discrete identifiers (e.g., Order `#17`, Tracking Code `BRAB1234567BR`, CPF numbers) are arbitrary sequences without semantic meaning. Vectorizing them leads to poor recall and catastrophic hallucinations of tracking details.
+   - *The SQL Solution:* Direct indexed lookups (`db.query(Order).filter(Order.order_id == 17)`) provide instantaneous O(1) resolution of order statuses, internal cancellation notes, and dispatch events.
+
+5. **Relational Integrity & Normalization:**
+   - E-commerce data is intrinsically relational: Categories contain Products; Orders link Customers to OrderItems and Products; Promotions link to specific Products with active date ranges. Relational schema modeling enforces foreign keys, cascades, and data consistency.
+
+---
+
+### 3.2 Deep Dive: Why Vector RAG (Qdrant) for Store Policies?
+
+While transactional catalog data belongs in SQL, **institutional policies and legal terms** are fundamentally unstructured and benefit immensely from semantic vector retrieval:
+
+1. **Vocabulary Mismatch & Paraphrasing Tolerance:**
+   - Customers rarely use formal legal jargon found in the store manual (e.g., *"direito de arrependimento nos termos do Art. 49 do Código de Defesa do Consumidor"*).
+   - Customers ask natural, conversational questions: *"comprei um violão e não gostei do timbre, posso devolver?"*, *"qual o prazo para desistir da compra?"*, or *"o frete da devolução sai do meu bolso?"*.
+   - Dense vector embeddings (`gemini-embedding-001`) project these varied colloquial queries into the same semantic space as the official policy chunks, achieving high-recall retrieval where exact SQL `LIKE` queries would fail.
+
+2. **Grounded In-Context Verification (Anti-Hallucination Guardrail):**
+   - Retail policies carry legal liability (e.g., 7 days for online remorse, 30 days for in-store defective exchanges, 90 days legal warranty, free shipping threshold of R$ 500 for Campo Grande urban perimeter).
+   - By feeding the top-k retrieved chunks directly into Gemini's tool response, the LLM is strictly constrained to cite only the terms documented in `políticas_da_loja.pdf`.
+
+3. **Separation of Concerns:**
+   - Legal and store management can update `políticas_da_loja.pdf` at any time. Running `python -m emporio_agent.rag.ingest_policy` chunks and indexes the new document in seconds without touching database schemas or altering agent code.
+
+---
+
+### 3.3 LLM & Function Calling: Google Gemini 3.1 Flash-Lite
+
+- **Sub-1.5s Response Latency:** Customer support demands near-instant conversational feedback. Flash-Lite delivers high token generation throughput without sacrificing reasoning.
+- **Native Automatic Function Calling (AFC):** Rather than fragile regex parsing of JSON markdown blocks, the official `google-genai` SDK validates tool definitions against OpenAPI schemas at the protocol level.
+- **Quota Stability:** Generous daily rate limits prevent the `429 Resource Exhausted` bottlenecks common with older or heavier models on shared tiers.
+
+---
+
+### 3.4 Vector Database: Embedded Qdrant
+
+- **Zero DevOps Overhead:** Qdrant runs in embedded mode via local storage (`qdrant_storage/`), meaning evaluators and developers do not need a running Qdrant daemon or external Docker networking to run tests locally.
+- **Production Drop-In Upgrade:** The codebase uses the standard `QdrantClient` interface. Transitioning to an enterprise Qdrant Cloud cluster in production requires changing a single environment variable (`QDRANT_URL`).
+
+---
+
+### 3.5 Web Architecture: FastAPI + React 19
+
+- **FastAPI Backend:** Fully asynchronous ASGI runtime with automatic OpenAPI docs (`/docs`), Pydantic validation, and unified serving of backend API and frontend static assets in a single container process.
+- **React 19 Frontend:** Built with Vite and Tailwind CSS. Features `localStorage` auto-resumption of customer sessions, modal-confirmed conversation deletion, and dynamic viewport handling (`100dvh`) to ensure flawless mobile execution.
+- **Lucide Icons:** Replaces distracting text emojis with crisp, professional SVG icons, honoring the store's traditional, high-end identity.
 
 ---
 
@@ -159,11 +229,15 @@ Artefact/
 │   ├── test_rag.py
 │   └── test_api.py
 ├── scripts/
-│   └── generate_scenarios.py             # Reproduces real conversation test traces
+│   ├── generate_scenarios.py             # Reproduces real conversation test traces
+│   ├── test_security.py                  # Automated SQLi and Prompt Injection tests
+│   └── build_submission_pdf.py           # Generates evaluator submission document
 ├── Dockerfile                            # Production multi-stage Docker build
 ├── docker-compose.yml                    # 1-command container orchestration
 ├── requirements.txt                      # Python dependencies
-└── README.md                             # Technical documentation
+├── render.yaml                           # Cloud production deployment blueprint
+├── Luis Gustavo Bonfim Ciaramicoli - AI Engineer – Full-Stack para Aplicações com IA Generativa.pdf # Official submission deliverable
+└── README.md                             # Comprehensive technical documentation
 ```
 
 ---

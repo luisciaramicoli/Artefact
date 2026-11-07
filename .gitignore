@@ -43,6 +43,10 @@ frontend/build/
 .npm
 *.log
 
+# Build & docs temp
+*.html
+!frontend/index.html
+
 # IDE & OS
 .vscode/
 .idea/

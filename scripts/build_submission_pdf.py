@@ -385,5 +385,9 @@ print("STDERR:", res.stderr)
 if PDF_PATH.exists():
     print(f"Successfully generated PDF at: {PDF_PATH}")
     print(f"PDF size: {PDF_PATH.stat().st_size} bytes")
+    # Clean up intermediate HTML file
+    if HTML_PATH.exists():
+        HTML_PATH.unlink()
+        print("Cleaned up intermediate HTML file.")
 else:
     print("PDF generation failed.")
