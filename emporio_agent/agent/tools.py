@@ -312,6 +312,40 @@ def check_order_status(
         db.close()
 
 
+def get_categories() -> Dict[str, Any]:
+    """
+    Retorna a lista completa de todas as categorias e departamentos de instrumentos musicais comercializados pela Empório da Música.
+    Use sempre que o cliente perguntar de forma ampla quais produtos a loja oferece, quais instrumentos vende,
+    quais categorias existem no catálogo ou quando quiser uma visão geral dos departamentos.
+    """
+    db: Session = SessionLocal()
+    try:
+        categories = db.query(Category).order_by(Category.category_id.asc()).all()
+        cat_list = []
+        for cat in categories:
+            prod_count = db.query(Product).filter(
+                Product.category_id == cat.category_id,
+                Product.status == "active"
+            ).count()
+            cat_list.append({
+                "category_id": cat.category_id,
+                "name": cat.name,
+                "description": cat.description,
+                "active_products_in_stock": prod_count
+            })
+
+        return {
+            "found": True,
+            "total_categories": len(cat_list),
+            "categories": cat_list,
+            "scope_reminder": "Trabalhamos exclusivamente com instrumentos musicais nessas categorias. Não vendemos acessórios (cordas, palhetas, cabos, cases, etc.)."
+        }
+    except Exception as e:
+        return {"error": f"Erro ao listar categorias: {str(e)}"}
+    finally:
+        db.close()
+
+
 def get_store_info() -> Dict[str, Any]:
     """
     Retorna informações essenciais e gerais sobre a Empório da Música:
@@ -328,6 +362,17 @@ def get_store_info() -> Dict[str, Any]:
             "saturday": "09:00 às 13:00",
             "sunday_and_holidays": "Fechado"
         },
+        "instrument_categories": [
+            "Guitarras",
+            "Baixos",
+            "Baterias e Percussão",
+            "Teclados e Pianos",
+            "Violões",
+            "Instrumentos de Sopro (Madeiras)",
+            "Instrumentos de Sopro (Metais)",
+            "Cordas Orquestrais",
+            "Ukuleles"
+        ],
         "payment_options": "PIX (5% de desconto à vista), Débito, Cartão de Crédito em até 12x sem juros (parcela mínima R$ 100), Boleto Bancário",
         "shipping": "Frete Grátis para Campo Grande acima de R$ 300 (ou fixo R$ 19,90). Retirada gratuita na loja em até 2h após confirmação do pagamento.",
         "scope_restriction": "A Empório da Música vende EXCLUSIVAMENTE instrumentos musicais. NÃO comercializa acessórios como cabos, cordas, palhetas, cases ou amplificadores."

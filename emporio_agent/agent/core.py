@@ -15,6 +15,7 @@ from emporio_agent.db.database import SessionLocal
 from emporio_agent.db.models import ConversationSession, ConversationMessage
 from emporio_agent.agent.persona import EMPORIO_SYSTEM_PROMPT
 from emporio_agent.agent.tools import (
+    get_categories,
     search_store_policies,
     query_products,
     get_product_details,
@@ -49,6 +50,7 @@ class EmporioAgent:
         )
 
         self.tools = [
+            get_categories,
             search_store_policies,
             query_products,
             get_product_details,

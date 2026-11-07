@@ -1,6 +1,7 @@
 import pytest
 from emporio_agent.db.seed import seed_database
 from emporio_agent.agent.tools import (
+    get_categories,
     query_products,
     get_product_details,
     check_order_status,
@@ -11,6 +12,18 @@ from emporio_agent.agent.tools import (
 @pytest.fixture(scope="module", autouse=True)
 def setup_db():
     seed_database()
+
+
+def test_get_categories():
+    res = get_categories()
+    assert res["found"] is True
+    assert res["total_categories"] == 9
+    cat_names = [c["name"] for c in res["categories"]]
+    assert "Guitarras" in cat_names
+    assert "Violões" in cat_names
+    assert "Teclados e Pianos" in cat_names
+    assert "Baterias e Percussão" in cat_names
+    assert "Ukuleles" in cat_names
 
 
 def test_query_violoes_under_1000():
