@@ -78,8 +78,12 @@ else:
 
 def start():
     """Entry point for running with uvicorn via CLI or script."""
+    import os
     import uvicorn
-    uvicorn.run("emporio_agent.api.main:app", host=settings.HOST, port=settings.PORT, reload=True)
+    port = int(os.environ.get("PORT", settings.PORT))
+    host = os.environ.get("HOST", settings.HOST)
+    reload = os.environ.get("ENVIRONMENT", "development") == "development"
+    uvicorn.run("emporio_agent.api.main:app", host=host, port=port, reload=reload)
 
 
 if __name__ == "__main__":
