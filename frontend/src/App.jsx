@@ -65,7 +65,9 @@ const SUGGESTIONS = [
 
 export default function App() {
   const [conversations, setConversations] = useState([]);
-  const [currentConvId, setCurrentConvId] = useState(null);
+  const [currentConvId, setCurrentConvId] = useState(() => {
+    return localStorage.getItem('emporio_conv_id') || null;
+  });
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -82,8 +84,34 @@ export default function App() {
     scrollToBottom();
   }, [messages, loading]);
 
+  // Load conversations on mount and auto-resume last session
   useEffect(() => {
-    loadConversations();
+    const initSessions = async () => {
+      try {
+        const res = await fetch('/api/conversations');
+        if (res.ok) {
+          const data = await res.json();
+          setConversations(data);
+
+          const savedId = localStorage.getItem('emporio_conv_id');
+          if (savedId) {
+            // Check if savedId exists in data
+            const exists = data.some(c => c.id === savedId);
+            if (exists) {
+              await selectConversation(savedId);
+              return;
+            }
+          }
+          // If no saved id but previous conversations exist, open the latest one
+          if (data.length > 0) {
+            await selectConversation(data[0].id);
+          }
+        }
+      } catch (e) {
+        console.error("Erro ao carregar conversas:", e);
+      }
+    };
+    initSessions();
   }, []);
 
   const loadConversations = async () => {
@@ -99,9 +127,11 @@ export default function App() {
   };
 
   const selectConversation = async (convId) => {
+    if (!convId) return;
     try {
       setLoading(true);
       setCurrentConvId(convId);
+      localStorage.setItem('emporio_conv_id', convId);
       const res = await fetch(`/api/conversations/${convId}`);
       if (res.ok) {
         const data = await res.json();
@@ -116,6 +146,7 @@ export default function App() {
   };
 
   const handleNewChat = () => {
+    localStorage.removeItem('emporio_conv_id');
     setCurrentConvId(null);
     setMessages([]);
     setInputMessage('');
@@ -181,6 +212,7 @@ export default function App() {
 
       setMessages(prev => [...prev, assistantMsg]);
       setCurrentConvId(data.conversation_id);
+      localStorage.setItem('emporio_conv_id', data.conversation_id);
       loadConversations();
     } catch (err) {
       console.error("Chat error:", err);
@@ -272,9 +304,14 @@ export default function App() {
                       : 'text-stone-300 hover:bg-stone-800/60 hover:text-white'
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 truncate pr-2">
+                  <div className="flex items-center space-x-2.5 truncate pr-2 min-w-0">
                     <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-amber-400' : 'text-stone-400'}`} />
-                    <span className="truncate">{sanitizeText(c.title) || "Atendimento"}</span>
+                    <span className="truncate flex-1">{sanitizeText(c.title) || "Atendimento"}</span>
+                    {c.message_count > 0 && (
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${active ? 'bg-amber-400/20 text-amber-300' : 'bg-stone-800 text-stone-400'}`}>
+                        {c.message_count}
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={(e) => handleDeleteConversation(e, c.id)}
