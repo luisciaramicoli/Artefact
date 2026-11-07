@@ -230,8 +230,7 @@ Artefact/
 │   └── test_api.py
 ├── scripts/
 │   ├── generate_scenarios.py             # Reproduces real conversation test traces
-│   ├── test_security.py                  # Automated SQLi and Prompt Injection tests
-│   └── build_submission_pdf.py           # Generates evaluator submission document
+│   └── test_security.py                  # Automated SQLi and Prompt Injection tests
 ├── Dockerfile                            # Production multi-stage Docker build
 ├── docker-compose.yml                    # 1-command container orchestration
 ├── requirements.txt                      # Python dependencies
