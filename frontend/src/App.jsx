@@ -307,11 +307,6 @@ export default function App() {
                   <div className="flex items-center space-x-2.5 truncate pr-2 min-w-0">
                     <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-amber-400' : 'text-stone-400'}`} />
                     <span className="truncate flex-1">{sanitizeText(c.title) || "Atendimento"}</span>
-                    {c.message_count > 0 && (
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${active ? 'bg-amber-400/20 text-amber-300' : 'bg-stone-800 text-stone-400'}`}>
-                        {c.message_count}
-                      </span>
-                    )}
                   </div>
                   <button
                     onClick={(e) => handleDeleteConversation(e, c.id)}
