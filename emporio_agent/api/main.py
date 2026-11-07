@@ -47,16 +47,33 @@ app.add_middleware(
 # Include routes
 app.include_router(router)
 
+# Mount frontend build if available
+frontend_dist = settings.BASE_DIR / "frontend" / "dist"
+if frontend_dist.exists():
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
 
-@app.get("/")
-def root():
-    return {
-        "service": settings.PROJECT_NAME,
-        "version": settings.VERSION,
-        "docs_url": "/docs",
-        "health_url": "/api/health",
-        "description": "Agent API ready. Send POST requests to /api/chat."
-    }
+    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    def serve_spa(full_path: str):
+        # Don't intercept API routes
+        if full_path.startswith("api/"):
+            return None
+        file_path = frontend_dist / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(frontend_dist / "index.html")
+else:
+    @app.get("/")
+    def root():
+        return {
+            "service": settings.PROJECT_NAME,
+            "version": settings.VERSION,
+            "docs_url": "/docs",
+            "health_url": "/api/health",
+            "description": "Agent API ready. Send POST requests to /api/chat."
+        }
 
 
 def start():
