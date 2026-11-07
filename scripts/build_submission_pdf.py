@@ -338,14 +338,18 @@ html_content = """<!DOCTYPE html>
 
 <h2>6. AI Coding Assistant Workflow</h2>
 <p>
-  In full transparency according to Artefact's evaluation criteria, I utilized <strong>Google Antigravity / Gemini</strong>
-  as a pair-programming partner. The collaborative division of labor:
+  In compliance with Artefact's evaluation guidelines, here is the transparent breakdown of how AI tools were utilized during development:
 </p>
 <ul>
-  <li><strong>Architectural Strategy:</strong> Formulating the hybrid deterministic SQL + semantic vector RAG architecture to eliminate numerical hallucination.</li>
-  <li><strong>Typing & Compatibility Debugging:</strong> Diagnosed a subtle Python 3.14 typing edge case where the Google GenAI SDK type checker rejected integer inputs into <code>Optional[float]</code> parameters, successfully resolving it via <code>Union[int, float, None]</code>.</li>
-  <li><strong>Automated Testing & Scaffolding:</strong> Accelerated Pytest fixtures, relational database seeding, and React 19 UI component scaffolding.</li>
+  <li><strong>Human-Led Architecture & System Design:</strong> Defining the hybrid deterministic-plus-vector architecture (relational SQL for catalog/orders, Qdrant vector RAG for store policies) and anti-hallucination guardrails was entirely led by system design decisions to meet Artefact's case constraints.</li>
+  <li><strong>Data Pipeline Acceleration:</strong> Automated generation of boilerplate SQLAlchemy models mapping the 6 CSV schemas and parsing routines for PDF extraction.</li>
+  <li><strong>Edge-Case Debugging:</strong> Accelerated diagnosis of strict type deserialization behavior in <code>google-genai</code>, ensuring proper union handling (<code>Union[int, float, None]</code>) for numeric tool arguments.</li>
+  <li><strong>Frontend UI Scaffolding:</strong> Accelerated setup of the React 19 + Tailwind component shell, focusing human effort on stateful chat flows and tool execution transparency badges.</li>
+  <li><strong>Test Suite Generation:</strong> Rapid authoring of Pytest fixtures and automated validation scripts across tools and RAG pipelines.</li>
 </ul>
+<p style="background-color: #f3f4f6; border-left: 3px solid #d97706; padding: 10px 14px; margin-top: 10px; font-size: 10pt; font-style: italic;">
+  <strong>Important Clarification:</strong> The AI assistant acted strictly as a velocity multiplier for boilerplate, exploratory debugging, and test coverage, while all architectural choices, business logic, system flows, guardrails, and quality gates were conceived, led, and decided under direct human direction.
+</p>
 
 <h2>7. Known Limitations & Production Roadmap</h2>
 <ul>

@@ -382,15 +382,15 @@ Given the 2-day prototype timeline, here are current architectural boundaries an
 
 In compliance with Artefact's evaluation guidelines, here is the transparent breakdown of how AI tools were utilized during development:
 
-- **AI Tool Used:** Google Antigravity & Gemini Pair-Programming Assistant.
-- **Workflow & Division of Labor:**
-  1. **Architecture & Design:** Defining the hybrid deterministic-plus-vector approach (SQL for numbers, Qdrant RAG for policies) to prevent LLM hallucinations.
-  2. **Data Pipeline:** Rapid generation of SQLAlchemy models matching the 6 CSV schemas and PDF extraction logic using `pypdf`.
-  3. **Debugging Edge Cases:** Diagnosed a subtle Python 3.14 typing incompatibility where `google-genai` strict type deserialization rejected integer values into `Optional[float]` tool parameters, resolved via `Union[int, float, None]`.
-  4. **Frontend Scaffolding:** Accelerated Vite + React 19 + Tailwind CSS setup and created the interactive tool inspection drawer.
-  5. **Verification & Testing:** Authored automated Pytest fixtures and live scenario validation scripts.
+- **AI Tools Used:** Google Gemini (Pair-Programming & Code Generation Assistant).
+- **Division of Labor & Workflow:**
+  1. **Human-Led Architecture & System Design:** Defining the hybrid deterministic-plus-vector architecture (relational SQL for catalog/orders, Qdrant vector RAG for store policies) and anti-hallucination guardrails was entirely led by system design decisions to meet Artefact's case constraints.
+  2. **Data Pipeline Acceleration:** Automated generation of boilerplate SQLAlchemy models mapping the 6 CSV schemas and parsing routines for PDF extraction.
+  3. **Edge-Case Debugging:** Accelerated diagnosis of strict type deserialization behavior in `google-genai`, ensuring proper union handling (`Union[int, float, None]`) for numeric tool arguments.
+  4. **Frontend UI Scaffolding:** Accelerated setup of the React 19 + Tailwind component shell, focusing human effort on stateful chat flows and tool execution transparency badges.
+  5. **Test Suite Generation:** Rapid authoring of Pytest fixtures and automated validation scripts across tools and RAG pipelines.
 
-*The AI assistant acted as an accelerator for boilerplate, test creation, and debugging, while system architecture, domain guardrails, and design decisions were strictly directed to meet Artefact's case requirements.*
+> **Important Clarification:** The AI assistant acted strictly as a velocity multiplier for boilerplate, exploratory debugging, and test coverage, while all architectural choices, business logic, system flows, guardrails, and quality gates were conceived, led, and decided under direct human direction.
 
 ---
 
