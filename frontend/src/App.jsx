@@ -8,49 +8,53 @@ import {
   Trash2,
   Menu,
   X,
-  Music,
-  Wrench,
-  ChevronDown,
-  ChevronUp,
-  Sparkles,
   MapPin,
   Clock,
-  ShieldCheck,
+  Phone,
   Package,
   RotateCcw,
-  Guitar
+  Guitar,
+  Sparkles,
+  Search,
+  CheckCheck
 } from 'lucide-react';
 
 const SUGGESTIONS = [
   {
     icon: Guitar,
     title: "Violões até R$ 1.000",
-    prompt: "Quais opções de violões disponíveis custando até R$1000?"
-  },
-  {
-    icon: MapPin,
-    title: "Endereço e Horários",
-    prompt: "Qual o endereço e o horário de funcionamento da loja?"
+    desc: "Modelos para iniciantes e estudantes com bom custo-benefício",
+    prompt: "Quais opções de violões vocês têm disponíveis custando até R$ 1.000?"
   },
   {
     icon: Sparkles,
-    title: "Preço Takamine GD20",
-    prompt: "Quanto custa o Takamine GD20?"
-  },
-  {
-    icon: RotateCcw,
-    title: "Política de Devolução",
-    prompt: "Me arrependi da minha compra online, posso devolver meu pedido?"
+    title: "Ficha do Takamine GD20",
+    desc: "Preço, formas de pagamento e especificações",
+    prompt: "Quanto custa o Takamine GD20 e quais as opções de parcelamento?"
   },
   {
     icon: Package,
-    title: "Status do Pedido #1",
+    title: "Acompanhar Meu Pedido",
+    desc: "Consulte o status e rastreamento da entrega",
     prompt: "Gostaria de saber o status e rastreamento do meu pedido número 1."
   },
   {
-    icon: Music,
-    title: "Acessórios (Escopo)",
-    prompt: "Vocês vendem encordoamento de aço e palhetas avulsas?"
+    icon: RotateCcw,
+    title: "Regras de Devolução",
+    desc: "Direito de arrependimento e trocas pelo WhatsApp",
+    prompt: "Comprei um instrumento e me arrependi da compra. Posso devolver? Como funciona o frete e o reembolso?"
+  },
+  {
+    icon: MapPin,
+    title: "Onde Fica a Loja?",
+    desc: "Endereço em Campo Grande e horários de atendimento",
+    prompt: "Qual o endereço da loja física e quais os horários de funcionamento?"
+  },
+  {
+    icon: Search,
+    title: "Catálogo Completo",
+    desc: "Conheça todas as categorias e instrumentos da loja",
+    prompt: "Quais produtos e categorias de instrumentos vocês oferecem?"
   }
 ];
 
@@ -61,8 +65,6 @@ export default function App() {
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [health, setHealth] = useState(null);
-  const [expandedTools, setExpandedTools] = useState({});
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -75,23 +77,9 @@ export default function App() {
     scrollToBottom();
   }, [messages, loading]);
 
-  // Load initial health & conversations
   useEffect(() => {
-    fetchHealth();
     loadConversations();
   }, []);
-
-  const fetchHealth = async () => {
-    try {
-      const res = await fetch('/api/health');
-      if (res.ok) {
-        const data = await res.json();
-        setHealth(data);
-      }
-    } catch (e) {
-      console.warn("Backend not yet connected:", e);
-    }
-  };
 
   const loadConversations = async () => {
     try {
@@ -101,7 +89,7 @@ export default function App() {
         setConversations(data);
       }
     } catch (e) {
-      console.error("Error loading conversations:", e);
+      console.error("Erro ao carregar conversas:", e);
     }
   };
 
@@ -116,7 +104,7 @@ export default function App() {
       }
       setSidebarOpen(false);
     } catch (e) {
-      console.error("Error loading conversation history:", e);
+      console.error("Erro ao carregar histórico:", e);
     } finally {
       setLoading(false);
     }
@@ -132,7 +120,7 @@ export default function App() {
 
   const handleDeleteConversation = async (e, convId) => {
     e.stopPropagation();
-    if (!window.confirm("Deseja apagar esta conversa?")) return;
+    if (!window.confirm("Deseja apagar esta conversa do seu histórico?")) return;
 
     try {
       const res = await fetch(`/api/conversations/${convId}`, { method: 'DELETE' });
@@ -143,7 +131,7 @@ export default function App() {
         }
       }
     } catch (e) {
-      console.error("Error deleting conversation:", e);
+      console.error("Erro ao excluir conversa:", e);
     }
   };
 
@@ -174,7 +162,7 @@ export default function App() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP Error ${res.status}`);
+        throw new Error(errorData.detail || `Erro de conexão`);
       }
 
       const data = await res.json();
@@ -183,7 +171,6 @@ export default function App() {
         id: Date.now() + 1,
         role: 'assistant',
         content: data.message,
-        tool_calls: data.tool_calls || [],
         created_at: data.created_at
       };
 
@@ -195,7 +182,7 @@ export default function App() {
       const errorMsg = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: `⚠️ Desculpe, tive uma oscilação na conexão: ${err.message}. Poderia tentar novamente em alguns segundos?`,
+        content: `Desculpe, tive uma instabilidade passageira na conexão. Poderia enviar sua pergunta novamente? Estou à disposição!`,
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMsg]);
@@ -204,16 +191,9 @@ export default function App() {
     }
   };
 
-  const toggleToolExpand = (msgId) => {
-    setExpandedTools(prev => ({
-      ...prev,
-      [msgId]: !prev[msgId]
-    }));
-  };
-
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-stone-950 text-stone-100">
-      {/* Mobile Sidebar Backdrop */}
+    <div className="flex h-screen w-screen overflow-hidden bg-stone-950 text-stone-100 font-sans">
+      {/* Mobile Backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
@@ -223,19 +203,19 @@ export default function App() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-stone-900 border-r border-stone-800 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 sm:w-80 flex-col bg-stone-900 border-r border-stone-800 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
         <div className="p-4 border-b border-stone-800 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emporio-600 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-emporio-900/40">
-              <Guitar className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-stone-950 shadow-md">
+              <Guitar className="w-6 h-6 stroke-[2.2]" />
             </div>
             <div>
-              <h1 className="font-bold text-base tracking-tight text-white leading-tight">Empório da Música</h1>
-              <p className="text-xs text-stone-400">Campo Grande • MS</p>
+              <h1 className="font-bold text-base text-white tracking-tight leading-snug">Empório da Música</h1>
+              <p className="text-xs text-amber-400/90 font-medium">Sua música começa aqui</p>
             </div>
           </div>
           <button
@@ -250,22 +230,24 @@ export default function App() {
         <div className="p-3">
           <button
             onClick={handleNewChat}
-            className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl bg-emporio-600 hover:bg-emporio-500 text-white font-medium text-sm transition-all shadow-md shadow-emporio-700/20 active:scale-[0.98]"
+            className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-stone-950 font-semibold text-sm transition-all shadow-md shadow-amber-950/20 active:scale-[0.98]"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Nova Conversa</span>
           </button>
         </div>
 
-        {/* Conversations History List */}
+        {/* Saved Conversations List */}
         <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-          <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-stone-500">
-            Histórico Recente
+          <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+            Conversas Anteriores
           </p>
           {conversations.length === 0 ? (
-            <p className="px-3 py-4 text-xs text-stone-500 italic text-center">
-              Nenhuma conversa salva ainda.
-            </p>
+            <div className="px-3 py-8 text-center text-xs text-stone-400 space-y-1">
+              <MessageSquare className="w-6 h-6 mx-auto opacity-40 mb-2" />
+              <p>Nenhuma conversa salva ainda.</p>
+              <p className="text-[11px] text-stone-400">Inicie uma conversa ao lado!</p>
+            </div>
           ) : (
             conversations.map((c) => {
               const active = c.id === currentConvId;
@@ -275,18 +257,18 @@ export default function App() {
                   onClick={() => selectConversation(c.id)}
                   className={`group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium cursor-pointer transition-colors ${
                     active
-                      ? 'bg-stone-800 text-white border border-stone-700'
+                      ? 'bg-stone-800 text-white border border-stone-700 shadow-sm'
                       : 'text-stone-300 hover:bg-stone-800/60 hover:text-white'
                   }`}
                 >
                   <div className="flex items-center space-x-2.5 truncate pr-2">
-                    <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-emporio-400' : 'text-stone-500'}`} />
-                    <span className="truncate">{c.title || "Conversa"}</span>
+                    <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-amber-400' : 'text-stone-400'}`} />
+                    <span className="truncate">{c.title || "Atendimento"}</span>
                   </div>
                   <button
                     onClick={(e) => handleDeleteConversation(e, c.id)}
                     className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-stone-700 text-stone-400 hover:text-red-400 transition-opacity"
-                    title="Excluir"
+                    title="Excluir conversa"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -296,19 +278,19 @@ export default function App() {
           )}
         </div>
 
-        {/* Tech Stack Footer */}
-        <div className="p-3 border-t border-stone-800 bg-stone-900/50 text-[11px] text-stone-400 space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-stone-500">Modelo:</span>
-            <span className="font-mono text-emerald-400">{health?.model || 'gemini-3.1-flash-lite'}</span>
+        {/* Customer Information Footer */}
+        <div className="p-4 border-t border-stone-800 bg-stone-900/60 text-xs text-stone-300 space-y-2.5">
+          <div className="flex items-start space-x-2">
+            <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+            <span className="text-[11px] leading-tight">Rua 14 de Maio, 3200 — Centro, Campo Grande - MS</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-stone-500">Vector Store:</span>
-            <span className="font-mono text-amber-400">Qdrant ({health?.total_indexed_policies || 10} chunks)</span>
+          <div className="flex items-center space-x-2">
+            <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="text-[11px]">Seg a Sex 09h–18h | Sáb 09h–13h</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-stone-500">Produtos DB:</span>
-            <span className="font-mono text-cyan-400">{health?.total_products || 65} itens</span>
+          <div className="flex items-center space-x-2">
+            <Phone className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="text-[11px] font-medium text-stone-200">(67) 3341-4444</span>
           </div>
         </div>
       </aside>
@@ -316,7 +298,7 @@ export default function App() {
       {/* Main Chat Area */}
       <main className="flex-1 flex flex-col h-full bg-stone-950 relative overflow-hidden">
         {/* Header Bar */}
-        <header className="h-16 px-4 lg:px-6 border-b border-stone-800 flex items-center justify-between bg-stone-900/60 backdrop-blur-md shrink-0">
+        <header className="h-16 px-4 lg:px-6 border-b border-stone-800 flex items-center justify-between bg-stone-900/70 backdrop-blur-md shrink-0">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -324,51 +306,65 @@ export default function App() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-sm font-semibold text-white">Atendimento Empório da Música</span>
+            <div className="relative">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-stone-950 shadow">
+                <Guitar className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-stone-900" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white leading-tight">Empório da Música</h2>
+              <div className="flex items-center space-x-1.5 text-[11px] text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Atendente Virtual • Online</span>
+              </div>
             </div>
           </div>
+
           <div className="flex items-center space-x-2">
-            <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-stone-800 text-stone-300 border border-stone-700">
-              Rua 14 de Maio, 3200 • (67) 3341-4444
-            </span>
+            <button
+              onClick={handleNewChat}
+              className="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700/80 text-stone-200 text-xs font-medium border border-stone-700 transition-colors"
+            >
+              <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
+              <span>Nova Conversa</span>
+            </button>
           </div>
         </header>
 
         {/* Message Feed */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
           {messages.length === 0 ? (
-            /* Welcome Empty State with Actionable Prompts */
+            /* Welcome State with Customer-Focused Prompts */
             <div className="max-w-2xl mx-auto py-8 text-center space-y-6">
-              <div className="inline-flex p-4 rounded-2xl bg-stone-900 border border-stone-800 text-emporio-400 shadow-xl">
-                <Guitar className="w-12 h-12" />
+              <div className="inline-flex p-4 rounded-2xl bg-gradient-to-b from-stone-800 to-stone-900 border border-stone-800 text-amber-400 shadow-xl">
+                <Guitar className="w-10 h-10 stroke-[1.8]" />
               </div>
               <div className="space-y-2">
                 <h2 className="text-2xl font-bold text-white tracking-tight">
-                  Bem-vindo à Empório da Música! 🎸
+                  Olá! Como posso ajudar você hoje? 🎸
                 </h2>
-                <p className="text-sm text-stone-400 max-w-lg mx-auto">
-                  Olá! Sou o assistente virtual inteligente da loja. Posso consultar nosso estoque em tempo real, checar status de pedidos, explicar regras de devolução e te ajudar a escolher o instrumento perfeito.
+                <p className="text-sm text-stone-300 max-w-lg mx-auto leading-relaxed">
+                  Bem-vindo à <strong>Empório da Música</strong>! Estou aqui para te ajudar a escolher o instrumento perfeito, consultar preços, tirar dúvidas sobre entregas ou acompanhar seus pedidos.
                 </p>
               </div>
 
               {/* Suggestions Grid */}
-              <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+              <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
                 {SUGGESTIONS.map((item, idx) => {
                   const Icon = item.icon;
                   return (
                     <button
                       key={idx}
                       onClick={() => handleSendMessage(item.prompt)}
-                      className="p-3.5 rounded-xl bg-stone-900 hover:bg-stone-800/80 border border-stone-800 hover:border-emporio-600/50 transition-all text-left group active:scale-[0.99]"
+                      className="p-3.5 rounded-2xl bg-stone-900/90 hover:bg-stone-800/90 border border-stone-800 hover:border-amber-500/40 transition-all text-left group active:scale-[0.99] shadow-sm"
                     >
-                      <div className="flex items-center space-x-2 text-emporio-400 group-hover:text-emporio-300 mb-1">
+                      <div className="flex items-center space-x-2 text-amber-400 group-hover:text-amber-300 mb-1">
                         <Icon className="w-4 h-4" />
                         <span className="text-xs font-semibold">{item.title}</span>
                       </div>
-                      <p className="text-xs text-stone-400 group-hover:text-stone-300 leading-snug">
-                        "{item.prompt}"
+                      <p className="text-xs text-stone-300 group-hover:text-stone-200 leading-snug">
+                        {item.desc}
                       </p>
                     </button>
                   );
@@ -377,11 +373,9 @@ export default function App() {
             </div>
           ) : (
             /* Conversation Messages */
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="max-w-3xl mx-auto space-y-5">
               {messages.map((m) => {
                 const isUser = m.role === 'user';
-                const hasTools = m.tool_calls && m.tool_calls.length > 0;
-                const isToolsOpen = expandedTools[m.id];
 
                 return (
                   <div
@@ -392,84 +386,54 @@ export default function App() {
                     <div
                       className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
                         isUser
-                          ? 'bg-emporio-600 text-white shadow-md'
-                          : 'bg-stone-800 border border-stone-700 text-emporio-400'
+                          ? 'bg-amber-600 text-stone-950 shadow-md font-semibold'
+                          : 'bg-stone-800 border border-stone-700 text-amber-400'
                       }`}
                     >
-                      {isUser ? 'VC' : <Guitar className="w-4 h-4" />}
+                      {isUser ? 'Você' : <Guitar className="w-4 h-4" />}
                     </div>
 
                     {/* Bubble Content */}
-                    <div className={`space-y-1.5 max-w-[85%] sm:max-w-[78%]`}>
-                      {/* Optional Tool Calls Disclosure for Assistant */}
-                      {!isUser && hasTools && (
-                        <div className="mb-2">
-                          <button
-                            onClick={() => toggleToolExpand(m.id)}
-                            className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-stone-900/90 border border-amber-500/30 text-[11px] text-amber-300 hover:bg-stone-800 transition-colors"
-                          >
-                            <Wrench className="w-3 h-3 text-amber-400" />
-                            <span>
-                              {m.tool_calls.length} consulta{m.tool_calls.length > 1 ? 's' : ''} realizada{m.tool_calls.length > 1 ? 's' : ''} nos sistemas da loja
-                            </span>
-                            {isToolsOpen ? (
-                              <ChevronUp className="w-3 h-3" />
-                            ) : (
-                              <ChevronDown className="w-3 h-3" />
-                            )}
-                          </button>
-
-                          {isToolsOpen && (
-                            <div className="mt-1.5 p-3 rounded-xl bg-stone-900 border border-stone-800 text-[11px] font-mono space-y-2">
-                              {m.tool_calls.map((tc, idx) => (
-                                <div key={idx} className="border-b border-stone-800 last:border-0 pb-1.5 last:pb-0">
-                                  <div className="text-amber-400 font-semibold flex items-center space-x-1">
-                                    <span>⚙️</span>
-                                    <span>{tc.tool}</span>
-                                  </div>
-                                  <div className="text-stone-400 overflow-x-auto mt-0.5">
-                                    <pre>{JSON.stringify(tc.arguments, null, 2)}</pre>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Message Text Bubble */}
+                    <div className="space-y-1 max-w-[85%] sm:max-w-[78%]">
                       <div
                         className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
                           isUser
-                            ? 'bg-emporio-600 text-white rounded-tr-sm'
+                            ? 'bg-amber-600 text-stone-950 rounded-tr-sm font-medium'
                             : 'bg-stone-900 border border-stone-800 text-stone-200 rounded-tl-sm'
                         }`}
                       >
-                        <div className="prose prose-invert prose-stone max-w-none text-sm break-words">
+                        <div className={`prose ${isUser ? 'text-stone-950 prose-invert-0' : 'prose-invert prose-stone'} max-w-none text-sm break-words`}>
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {m.content}
                           </ReactMarkdown>
                         </div>
                       </div>
 
-                      {/* Timestamp */}
-                      <div className={`text-[10px] text-stone-500 px-1 ${isUser ? 'text-right' : 'text-left'}`}>
-                        {m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      {/* Timestamp & Status */}
+                      <div className={`flex items-center space-x-1 text-[10px] text-stone-400 px-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
+                        <span>
+                          {m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                        </span>
+                        {isUser && <CheckCheck className="w-3 h-3 text-amber-400/80 inline" />}
                       </div>
                     </div>
                   </div>
                 );
               })}
 
-              {/* Loading Thinking State */}
+              {/* Typing Indicator */}
               {loading && (
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-stone-800 border border-stone-700 flex items-center justify-center shrink-0 text-emporio-400">
-                    <Guitar className="w-4 h-4 animate-spin" />
+                  <div className="w-8 h-8 rounded-xl bg-stone-800 border border-stone-700 flex items-center justify-center shrink-0 text-amber-400">
+                    <Guitar className="w-4 h-4 animate-pulse" />
                   </div>
-                  <div className="rounded-2xl rounded-tl-sm px-4 py-3 bg-stone-900 border border-stone-800 text-xs text-stone-400 flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emporio-400 animate-ping" />
-                    <span>Consultando catálogo, políticas e preparando resposta...</span>
+                  <div className="rounded-2xl rounded-tl-sm px-4 py-3 bg-stone-900 border border-stone-800 text-stone-300 flex items-center space-x-2 text-xs">
+                    <div className="flex space-x-1 items-center py-0.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce [animation-delay:-0.3s]" />
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce [animation-delay:-0.15s]" />
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce" />
+                    </div>
+                    <span className="text-stone-400 text-xs pl-1">Consultando informações...</span>
                   </div>
                 </div>
               )}
@@ -480,14 +444,14 @@ export default function App() {
         </div>
 
         {/* Bottom Input Area */}
-        <div className="p-4 border-t border-stone-800 bg-stone-900/60 backdrop-blur-md shrink-0">
+        <div className="p-4 border-t border-stone-800 bg-stone-900/70 backdrop-blur-md shrink-0">
           <div className="max-w-3xl mx-auto">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSendMessage();
               }}
-              className="relative flex items-center bg-stone-900 rounded-2xl border border-stone-800 focus-within:border-emporio-600 transition-colors shadow-lg"
+              className="relative flex items-center bg-stone-900 rounded-2xl border border-stone-800 focus-within:border-amber-500/80 transition-colors shadow-lg"
             >
               <textarea
                 ref={inputRef}
@@ -500,19 +464,20 @@ export default function App() {
                   }
                 }}
                 rows={1}
-                placeholder="Pergunte sobre instrumentos, preços, status de pedidos ou políticas da loja..."
-                className="w-full py-3.5 pl-4 pr-12 bg-transparent text-sm text-stone-100 placeholder-stone-500 focus:outline-none resize-none max-h-32 min-h-[48px]"
+                placeholder="Digite sua dúvida sobre instrumentos, pedidos ou políticas..."
+                className="w-full py-3.5 pl-4 pr-12 bg-transparent text-sm text-stone-100 placeholder-stone-400 focus:outline-none resize-none max-h-32 min-h-[48px]"
               />
               <button
                 type="submit"
                 disabled={!inputMessage.trim() || loading}
-                className="absolute right-2 p-2 rounded-xl bg-emporio-600 hover:bg-emporio-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
+                className="absolute right-2 p-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-stone-950 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 shadow-sm"
+                title="Enviar mensagem"
               >
                 <Send className="w-4 h-4" />
               </button>
             </form>
-            <p className="mt-2 text-[11px] text-stone-500 text-center">
-              Empório da Música • Atendimento com IA Generativa (Gemini + Qdrant RAG + SQLite)
+            <p className="mt-2 text-[11px] text-stone-400 text-center">
+              Empório da Música • Atendimento Oficial • Campo Grande / MS
             </p>
           </div>
         </div>
