@@ -1,11 +1,15 @@
 # 🎸 Empório da Música — AI Customer Support Agent
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Render-brightgreen?style=for-the-badge&logo=render)](https://artefact-rovw.onrender.com)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![React 19](https://img.shields.io/badge/React-19.0-61dafb.svg)](https://react.dev/)
 [![Qdrant](https://img.shields.io/badge/Vector_DB-Qdrant-dc2626.svg)](https://qdrant.tech/)
 [![Google Gemini](https://img.shields.io/badge/LLM-Gemini_3.1_Flash_Lite-4285F4.svg)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+> 🚀 **Live Interactive Demo:** [https://artefact-rovw.onrender.com](https://artefact-rovw.onrender.com)  
+> *Evaluators can test the complete AI agent, catalog queries, and store policy RAG directly in the browser.*
 
 An intelligent, full-stack customer support agent prototype built for **Empório da Música**, a traditional musical instrument store based in Campo Grande, MS.
 
@@ -166,7 +170,13 @@ Artefact/
 
 ## 5. Getting Started & How to Run
 
-### Prerequisites
+### 🌐 Option 1: Live Cloud Demo (Zero Installation)
+The application is deployed live in production on Render. Evaluators can immediately test the entire system without running anything locally:
+👉 **[https://artefact-rovw.onrender.com](https://artefact-rovw.onrender.com)**
+
+---
+
+### Prerequisites (For Local Execution)
 - Python 3.11+
 - Node.js 18+ (only needed if building frontend locally)
 - A Google Gemini API Key ([Get one free at Google AI Studio](https://aistudio.google.com/))
