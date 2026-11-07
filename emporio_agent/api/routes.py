@@ -96,6 +96,17 @@ def get_conversation_history(conversation_id: str, db: Session = Depends(get_db)
     )
 
 
+@router.delete("/conversations")
+def clear_all_conversations(db: Session = Depends(get_db)):
+    """Delete all conversation sessions and their messages."""
+    sessions = db.query(ConversationSession).all()
+    count = len(sessions)
+    for s in sessions:
+        db.delete(s)
+    db.commit()
+    return {"status": "success", "message": f"Deleted {count} conversations."}
+
+
 @router.delete("/conversations/{conversation_id}")
 def delete_conversation(conversation_id: str, db: Session = Depends(get_db)):
     """Delete a conversation session and all its messages."""

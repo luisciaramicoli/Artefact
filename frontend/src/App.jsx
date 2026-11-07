@@ -19,9 +19,7 @@ import {
   CheckCheck,
   User,
   Store,
-  ArrowRight,
-  ShieldCheck,
-  CircleDot
+  AlertTriangle
 } from 'lucide-react';
 
 const SUGGESTIONS = [
@@ -73,6 +71,14 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Modal confirmation state for deletion
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    type: null, // 'single' | 'all'
+    convId: null,
+    title: ''
+  });
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -95,14 +101,12 @@ export default function App() {
 
           const savedId = localStorage.getItem('emporio_conv_id');
           if (savedId) {
-            // Check if savedId exists in data
             const exists = data.some(c => c.id === savedId);
             if (exists) {
               await selectConversation(savedId);
               return;
             }
           }
-          // If no saved id but previous conversations exist, open the latest one
           if (data.length > 0) {
             await selectConversation(data[0].id);
           }
@@ -154,20 +158,50 @@ export default function App() {
     if (inputRef.current) inputRef.current.focus();
   };
 
-  const handleDeleteConversation = async (e, convId) => {
-    e.stopPropagation();
-    if (!window.confirm("Deseja apagar esta conversa do seu histórico?")) return;
+  // Open delete single dialog
+  const openDeleteSingle = (convId, title, e) => {
+    if (e) e.stopPropagation();
+    setDeleteModal({
+      isOpen: true,
+      type: 'single',
+      convId,
+      title: title || 'este atendimento'
+    });
+  };
 
+  // Open delete all dialog
+  const openDeleteAll = (e) => {
+    if (e) e.stopPropagation();
+    setDeleteModal({
+      isOpen: true,
+      type: 'all',
+      convId: null,
+      title: 'todo o histórico de atendimentos'
+    });
+  };
+
+  // Confirm and execute deletion
+  const handleConfirmDelete = async () => {
     try {
-      const res = await fetch(`/api/conversations/${convId}`, { method: 'DELETE' });
-      if (res.ok) {
-        setConversations(prev => prev.filter(c => c.id !== convId));
-        if (currentConvId === convId) {
+      if (deleteModal.type === 'single' && deleteModal.convId) {
+        const res = await fetch(`/api/conversations/${deleteModal.convId}`, { method: 'DELETE' });
+        if (res.ok) {
+          setConversations(prev => prev.filter(c => c.id !== deleteModal.convId));
+          if (currentConvId === deleteModal.convId) {
+            handleNewChat();
+          }
+        }
+      } else if (deleteModal.type === 'all') {
+        const res = await fetch('/api/conversations', { method: 'DELETE' });
+        if (res.ok) {
+          setConversations([]);
           handleNewChat();
         }
       }
     } catch (e) {
-      console.error("Erro ao excluir conversa:", e);
+      console.error("Erro ao excluir:", e);
+    } finally {
+      setDeleteModal({ isOpen: false, type: null, convId: null, title: '' });
     }
   };
 
@@ -234,59 +268,121 @@ export default function App() {
     return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}]/gu, '');
   };
 
+  // Get active conversation title
+  const activeConversation = conversations.find(c => c.id === currentConvId);
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-stone-950 text-stone-100 font-sans">
-      {/* Mobile Backdrop */}
+    <div className="flex h-[100dvh] w-full min-h-[100dvh] max-h-[100dvh] overflow-hidden bg-stone-950 text-stone-100 font-sans antialiased selection:bg-amber-500/30">
+      
+      {/* Mobile Backdrop Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity lg:hidden"
           onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
 
-      {/* Sidebar */}
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl bg-stone-900 border border-stone-800 p-5 shadow-2xl space-y-4">
+            <div className="flex items-center space-x-3 text-red-400">
+              <div className="p-2.5 rounded-xl bg-red-950/60 border border-red-800/50">
+                <Trash2 className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white text-sm">
+                  {deleteModal.type === 'all' ? "Limpar todo o histórico?" : "Excluir atendimento?"}
+                </h3>
+                <p className="text-xs text-stone-400">Esta ação é irreversível</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-stone-300 leading-relaxed">
+              {deleteModal.type === 'all'
+                ? "Deseja excluir permanentemente todas as conversas salvas no seu histórico de atendimento?"
+                : `Deseja remover permanentemente o atendimento "${sanitizeText(deleteModal.title)}"?`}
+            </p>
+
+            <div className="flex items-center justify-end space-x-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModal({ isOpen: false, type: null, convId: null, title: '' })}
+                className="px-4 py-2 rounded-xl text-xs font-medium text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-red-600 hover:bg-red-500 active:scale-95 transition-all shadow-md shadow-red-950/40 flex items-center space-x-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Excluir</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sidebar Drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 sm:w-80 flex-col bg-stone-900 border-r border-stone-800 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[84vw] max-w-[320px] flex-col bg-stone-900 border-r border-stone-800 transition-transform duration-300 ease-in-out lg:static lg:w-72 xl:w-80 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
-        <div className="p-4 border-b border-stone-800 flex items-center justify-between">
+        <div className="p-4 border-b border-stone-800 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-stone-950 shadow-md">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-stone-950 shadow-md shrink-0">
               <Guitar className="w-5 h-5 stroke-[2.2]" />
             </div>
-            <div>
-              <h1 className="font-bold text-base text-white tracking-tight leading-snug">Empório da Música</h1>
-              <p className="text-xs text-amber-400 font-medium">Atendimento ao Cliente</p>
+            <div className="min-w-0">
+              <h1 className="font-bold text-sm sm:text-base text-white tracking-tight leading-snug truncate">
+                Empório da Música
+              </h1>
+              <p className="text-[11px] sm:text-xs text-amber-400 font-medium truncate">Atendimento Especializado</p>
             </div>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 lg:hidden"
+            className="p-2 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800 lg:hidden min-w-[36px] min-h-[36px] flex items-center justify-center"
+            title="Fechar menu"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* New Chat Button */}
-        <div className="p-3">
+        <div className="p-3 shrink-0">
           <button
             onClick={handleNewChat}
-            className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-stone-950 font-semibold text-sm transition-all shadow-md shadow-amber-950/20 active:scale-[0.98]"
+            className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-stone-950 font-semibold text-xs sm:text-sm transition-all shadow-md shadow-amber-950/20 active:scale-[0.98]"
           >
-            <PlusCircle className="w-4 h-4" />
-            <span>Nova Conversa</span>
+            <PlusCircle className="w-4 h-4 shrink-0" />
+            <span>Novo Atendimento</span>
           </button>
         </div>
 
-        {/* Saved Conversations List */}
-        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-          <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
-            Histórico de Atendimento
-          </p>
+        {/* Conversations History Section */}
+        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 overscroll-contain">
+          <div className="flex items-center justify-between px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+            <span>Histórico de Atendimento</span>
+            {conversations.length > 0 && (
+              <button
+                onClick={openDeleteAll}
+                className="text-[10px] lowercase text-stone-400 hover:text-red-400 active:text-red-300 flex items-center space-x-1 p-1 rounded transition-colors"
+                title="Limpar todo o histórico"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>limpar tudo</span>
+              </button>
+            )}
+          </div>
+
           {conversations.length === 0 ? (
-            <div className="px-3 py-8 text-center text-xs text-stone-400 space-y-1">
+            <div className="px-3 py-10 text-center text-xs text-stone-400 space-y-1">
               <MessageSquare className="w-6 h-6 mx-auto opacity-40 mb-2" />
               <p>Nenhuma conversa gravada.</p>
               <p className="text-[11px] text-stone-500">Inicie uma nova mensagem ao lado.</p>
@@ -294,6 +390,8 @@ export default function App() {
           ) : (
             conversations.map((c) => {
               const active = c.id === currentConvId;
+              const titleText = sanitizeText(c.title) || "Atendimento";
+
               return (
                 <div
                   key={c.id}
@@ -304,14 +402,17 @@ export default function App() {
                       : 'text-stone-300 hover:bg-stone-800/60 hover:text-white'
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 truncate pr-2 min-w-0">
+                  <div className="flex items-center space-x-2.5 truncate pr-1 min-w-0 flex-1">
                     <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-amber-400' : 'text-stone-400'}`} />
-                    <span className="truncate flex-1">{sanitizeText(c.title) || "Atendimento"}</span>
+                    <span className="truncate">{titleText}</span>
                   </div>
+
+                  {/* Delete Conversation Button: Always visible on touch/mobile, hover on desktop */}
                   <button
-                    onClick={(e) => handleDeleteConversation(e, c.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-stone-700 text-stone-400 hover:text-red-400 transition-opacity"
-                    title="Excluir conversa"
+                    type="button"
+                    onClick={(e) => openDeleteSingle(c.id, titleText, e)}
+                    className="p-1.5 rounded-lg text-stone-400 hover:text-red-400 hover:bg-stone-700/80 active:bg-red-950/40 opacity-75 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 ml-1"
+                    title="Excluir este atendimento"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -322,7 +423,7 @@ export default function App() {
         </div>
 
         {/* Store Info Footer */}
-        <div className="p-4 border-t border-stone-800 bg-stone-900/60 text-xs text-stone-300 space-y-2.5">
+        <div className="p-3.5 border-t border-stone-800 bg-stone-900/60 text-xs text-stone-300 space-y-2 shrink-0">
           <div className="flex items-start space-x-2">
             <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
             <span className="text-[11px] leading-tight">Rua 14 de Maio, 3200 — Centro, Campo Grande - MS</span>
@@ -341,75 +442,94 @@ export default function App() {
       {/* Main Chat Area */}
       <main className="flex-1 flex flex-col h-full bg-stone-950 relative overflow-hidden">
         {/* Header Bar */}
-        <header className="h-16 px-4 lg:px-6 border-b border-stone-800 flex items-center justify-between bg-stone-900/70 backdrop-blur-md shrink-0">
-          <div className="flex items-center space-x-3">
+        <header className="h-14 sm:h-16 px-3 sm:px-6 border-b border-stone-800 flex items-center justify-between bg-stone-900/70 backdrop-blur-md shrink-0 z-10">
+          <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 lg:hidden"
+              className="p-2 rounded-xl text-stone-300 hover:text-white hover:bg-stone-800 lg:hidden min-w-[40px] min-h-[40px] flex items-center justify-center shrink-0 active:scale-95"
+              title="Abrir histórico e menu"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="relative">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-stone-950 shadow">
-                <Store className="w-5 h-5 stroke-[2.2]" />
+            <div className="relative shrink-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-500 flex items-center justify-center text-stone-950 shadow">
+                <Store className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]" />
               </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-stone-900" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-stone-900" />
             </div>
-            <div>
-              <h2 className="text-sm font-semibold text-white leading-tight">Empório da Música</h2>
-              <div className="flex items-center space-x-1.5 text-[11px] text-emerald-400 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Atendimento Especializado • Online</span>
+            <div className="min-w-0">
+              <h2 className="text-xs sm:text-sm font-semibold text-white leading-tight truncate">
+                Empório da Música
+              </h2>
+              <div className="flex items-center space-x-1.5 text-[10px] sm:text-[11px] text-emerald-400 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="truncate">Atendimento Online</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          {/* Header Action Buttons */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+            {/* Delete Active Session Button */}
+            {currentConvId && (
+              <button
+                type="button"
+                onClick={() => openDeleteSingle(currentConvId, activeConversation?.title)}
+                className="p-2 sm:px-2.5 sm:py-1.5 rounded-lg text-stone-400 hover:text-red-400 hover:bg-red-950/30 border border-stone-800 hover:border-red-900/40 text-xs font-medium transition-all active:scale-95"
+                title="Excluir este atendimento"
+              >
+                <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                <span className="hidden md:inline ml-1.5">Excluir</span>
+              </button>
+            )}
+
+            {/* New Chat Button */}
             <button
               onClick={handleNewChat}
-              className="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700/80 text-stone-200 text-xs font-medium border border-stone-700 transition-colors"
+              className="p-2 sm:px-3 sm:py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700/80 text-stone-200 text-xs font-medium border border-stone-700 transition-colors flex items-center space-x-1.5 active:scale-95"
+              title="Iniciar novo atendimento"
             >
-              <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
-              <span>Nova Conversa</span>
+              <PlusCircle className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
+              <span className="hidden sm:inline">Nova Conversa</span>
             </button>
           </div>
         </header>
 
         {/* Message Feed */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-6 overscroll-contain">
           {messages.length === 0 ? (
-            /* Welcome State with Clean Icon Cards */
-            <div className="max-w-2xl mx-auto py-8 text-center space-y-6">
-              <div className="inline-flex p-4 rounded-2xl bg-gradient-to-b from-stone-800 to-stone-900 border border-stone-800 text-amber-400 shadow-xl">
-                <Guitar className="w-10 h-10 stroke-[1.8]" />
+            /* Welcome State */
+            <div className="max-w-2xl mx-auto py-4 sm:py-8 text-center space-y-4 sm:space-y-6">
+              <div className="inline-flex p-3 sm:p-4 rounded-2xl bg-gradient-to-b from-stone-800 to-stone-900 border border-stone-800 text-amber-400 shadow-xl">
+                <Guitar className="w-8 h-8 sm:w-10 sm:h-10 stroke-[1.8]" />
               </div>
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-white tracking-tight">
+              <div className="space-y-1.5 sm:space-y-2 px-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
                   Como podemos ajudar você hoje?
                 </h2>
-                <p className="text-sm text-stone-300 max-w-lg mx-auto leading-relaxed">
-                  Bem-vindo à <strong>Empório da Música</strong>. Estamos à disposição para consultar modelos, preços, disponibilidade de estoque, prazos de entrega ou apoiar com suas compras.
+                <p className="text-xs sm:text-sm text-stone-300 max-w-lg mx-auto leading-relaxed">
+                  Bem-vindo à <strong>Empório da Música</strong>. Consulte modelos, preços com desconto no PIX, rastreio de pedidos e prazos de garantia.
                 </p>
               </div>
 
               {/* Suggestions Grid */}
-              <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+              <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 text-left">
                 {SUGGESTIONS.map((item, idx) => {
                   const Icon = item.icon;
                   return (
                     <button
                       key={idx}
                       onClick={() => handleSendMessage(item.prompt)}
-                      className="p-3.5 rounded-2xl bg-stone-900/90 hover:bg-stone-800/90 border border-stone-800 hover:border-amber-500/40 transition-all text-left group active:scale-[0.99] shadow-sm flex items-start space-x-3"
+                      className="p-3 sm:p-3.5 rounded-2xl bg-stone-900/90 hover:bg-stone-800/90 border border-stone-800 hover:border-amber-500/40 transition-all text-left group active:scale-[0.98] shadow-sm flex items-start space-x-3"
                     >
                       <div className="p-2 rounded-xl bg-stone-800 text-amber-400 group-hover:bg-amber-600 group-hover:text-stone-950 transition-colors shrink-0">
                         <Icon className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-xs font-semibold text-white group-hover:text-amber-300 block mb-0.5">
+                        <span className="text-xs font-semibold text-white group-hover:text-amber-300 block mb-0.5 truncate">
                           {item.title}
                         </span>
-                        <p className="text-xs text-stone-400 group-hover:text-stone-300 leading-snug truncate">
+                        <p className="text-[11px] sm:text-xs text-stone-400 group-hover:text-stone-300 leading-snug line-clamp-2">
                           {item.desc}
                         </p>
                       </div>
@@ -420,7 +540,7 @@ export default function App() {
             </div>
           ) : (
             /* Conversation Messages */
-            <div className="max-w-3xl mx-auto space-y-5">
+            <div className="max-w-3xl mx-auto space-y-4 sm:space-y-5">
               {messages.map((m) => {
                 const isUser = m.role === 'user';
                 const cleanContent = sanitizeText(m.content);
@@ -428,29 +548,29 @@ export default function App() {
                 return (
                   <div
                     key={m.id}
-                    className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
+                    className={`flex items-start gap-2.5 sm:gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
                   >
-                    {/* Avatar with Lucide Icon */}
+                    {/* Avatar */}
                     <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs shadow-sm ${
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0 text-xs shadow-sm ${
                         isUser
                           ? 'bg-amber-600 text-stone-950'
                           : 'bg-stone-800 border border-stone-700 text-amber-400'
                       }`}
                     >
-                      {isUser ? <User className="w-4 h-4 stroke-[2.2]" /> : <Store className="w-4 h-4 stroke-[2]" />}
+                      {isUser ? <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.2]" /> : <Store className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2]" />}
                     </div>
 
                     {/* Bubble Content */}
-                    <div className="space-y-1 max-w-[85%] sm:max-w-[78%]">
+                    <div className="space-y-1 max-w-[88%] sm:max-w-[78%]">
                       <div
-                        className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+                        className={`rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-[13px] sm:text-sm leading-relaxed shadow-sm ${
                           isUser
                             ? 'bg-amber-600 text-stone-950 rounded-tr-sm font-medium'
                             : 'bg-stone-900 border border-stone-800 text-stone-200 rounded-tl-sm'
                         }`}
                       >
-                        <div className={`prose ${isUser ? 'text-stone-950 prose-invert-0' : 'prose-invert prose-stone'} max-w-none text-sm break-words`}>
+                        <div className={`prose ${isUser ? 'text-stone-950 prose-invert-0' : 'prose-invert prose-stone'} max-w-none text-[13px] sm:text-sm break-words overflow-x-auto`}>
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
@@ -480,17 +600,17 @@ export default function App() {
 
               {/* Typing Indicator */}
               {loading && (
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-stone-800 border border-stone-700 flex items-center justify-center shrink-0 text-amber-400">
-                    <Store className="w-4 h-4 animate-pulse" />
+                <div className="flex items-start gap-2.5 sm:gap-3">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-stone-800 border border-stone-700 flex items-center justify-center shrink-0 text-amber-400">
+                    <Store className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse" />
                   </div>
-                  <div className="rounded-2xl rounded-tl-sm px-4 py-3 bg-stone-900 border border-stone-800 text-stone-300 flex items-center space-x-2 text-xs">
+                  <div className="rounded-2xl rounded-tl-sm px-3.5 py-2.5 bg-stone-900 border border-stone-800 text-stone-300 flex items-center space-x-2 text-xs">
                     <div className="flex space-x-1 items-center py-0.5">
                       <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce [animation-delay:-0.3s]" />
                       <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce [animation-delay:-0.15s]" />
                       <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce" />
                     </div>
-                    <span className="text-stone-400 text-xs pl-1">Consultando informações...</span>
+                    <span className="text-stone-400 text-[11px] sm:text-xs pl-1">Consultando informações...</span>
                   </div>
                 </div>
               )}
@@ -501,7 +621,7 @@ export default function App() {
         </div>
 
         {/* Bottom Input Area */}
-        <div className="p-4 border-t border-stone-800 bg-stone-900/70 backdrop-blur-md shrink-0">
+        <div className="p-2.5 sm:p-4 border-t border-stone-800 bg-stone-900/80 backdrop-blur-md shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="max-w-3xl mx-auto">
             <form
               onSubmit={(e) => {
@@ -521,19 +641,19 @@ export default function App() {
                   }
                 }}
                 rows={1}
-                placeholder="Digite sua dúvida sobre instrumentos, pedidos ou políticas..."
-                className="w-full py-3.5 pl-4 pr-12 bg-transparent text-sm text-stone-100 placeholder-stone-400 focus:outline-none resize-none max-h-32 min-h-[48px]"
+                placeholder="Pergunte sobre produtos, pedidos, trocas..."
+                className="w-full py-3 sm:py-3.5 pl-3.5 sm:pl-4 pr-12 bg-transparent text-base sm:text-sm text-stone-100 placeholder-stone-400 focus:outline-none resize-none max-h-32 min-h-[44px]"
               />
               <button
                 type="submit"
                 disabled={!inputMessage.trim() || loading}
-                className="absolute right-2 p-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-stone-950 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 shadow-sm"
+                className="absolute right-1.5 sm:right-2 p-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-stone-950 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 shadow-sm min-w-[36px] min-h-[36px] flex items-center justify-center"
                 title="Enviar mensagem"
               >
                 <Send className="w-4 h-4" />
               </button>
             </form>
-            <p className="mt-2 text-[11px] text-stone-400 text-center">
+            <p className="mt-1.5 text-[10px] sm:text-[11px] text-stone-400 text-center truncate">
               Empório da Música • Atendimento Oficial • Campo Grande / MS
             </p>
           </div>
