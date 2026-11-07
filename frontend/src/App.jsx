@@ -475,21 +475,21 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => openDeleteSingle(currentConvId, activeConversation?.title)}
-                className="p-2 sm:px-2.5 sm:py-1.5 rounded-lg text-stone-400 hover:text-red-400 hover:bg-red-950/30 border border-stone-800 hover:border-red-900/40 text-xs font-medium transition-all active:scale-95"
+                className="inline-flex items-center justify-center space-x-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-lg text-stone-400 hover:text-red-400 hover:bg-red-950/30 border border-stone-800 hover:border-red-900/40 text-xs font-medium transition-all active:scale-95 whitespace-nowrap"
                 title="Excluir este atendimento"
               >
-                <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                <span className="hidden md:inline ml-1.5">Excluir</span>
+                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline">Excluir</span>
               </button>
             )}
 
             {/* New Chat Button */}
             <button
               onClick={handleNewChat}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700/80 text-stone-200 text-xs font-medium border border-stone-700 transition-colors flex items-center space-x-1.5 active:scale-95"
+              className="inline-flex items-center justify-center space-x-1.5 p-2 sm:px-3 sm:py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700/80 text-stone-200 text-xs font-medium border border-stone-700 transition-colors active:scale-95 whitespace-nowrap"
               title="Iniciar novo atendimento"
             >
-              <PlusCircle className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
+              <PlusCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span className="hidden sm:inline">Nova Conversa</span>
             </button>
           </div>
